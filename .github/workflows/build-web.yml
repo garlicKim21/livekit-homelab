@@ -1,0 +1,39 @@
+name: build-web
+
+# 웹앱(app/) 컨테이너 이미지를 amd64로 빌드해 ghcr 에 푸시한다.
+# 로컬 docker/buildx 불필요 — GitHub ubuntu 러너에서 네이티브 빌드.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/build-web.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push (linux/amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          platforms: linux/amd64
+          push: true
+          # ghcr 는 소유자/이미지명이 소문자여야 함 → config/.env 의 APP_IMAGE 와 일치
+          tags: |
+            ghcr.io/garlickim21/livekit-homelab-web:latest
+            ghcr.io/garlickim21/livekit-homelab-web:${{ github.sha }}

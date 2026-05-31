@@ -16,7 +16,8 @@ spec:
       containers:
         - name: lk-web
           image: ${APP_IMAGE}
-          imagePullPolicy: IfNotPresent
+          # :latest 가변 태그라 항상 최신을 받도록 (CI 가 push 후 rollout restart 시 갱신)
+          imagePullPolicy: Always
           ports:
             - { name: http, containerPort: 8080 }
           envFrom:
