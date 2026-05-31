@@ -41,8 +41,8 @@
     const $ = (id) => document.getElementById(id);
     const log = logTo($('status'));
     let room, LK;
-    // 후면 카메라 고정 (iOS Safari 는 facingMode 런타임 전환이 불안정 → 후면 고정)
-    const captureOpts = () => ({ facingMode: 'environment', resolution: LK.VideoPresets.h1080.resolution });
+    // 후면 카메라 강제 (iOS Safari 는 'environment' soft 제약을 무시하기도 함 → exact 로 강제)
+    const captureOpts = () => ({ facingMode: { exact: 'environment' }, resolution: LK.VideoPresets.h1080.resolution });
 
     (async () => {
       const cfg = await loadConfig();
@@ -68,7 +68,13 @@
         log('시그널링 연결됨: ' + wsUrl);
 
         await room.localParticipant.setMicrophoneEnabled(true);
-        await room.localParticipant.setCameraEnabled(true, captureOpts());
+        try {
+          await room.localParticipant.setCameraEnabled(true, captureOpts());
+        } catch (e) {
+          // 후면 카메라가 없는 기기(노트북 등)면 기본 카메라로 폴백
+          log('후면 카메라 불가, 기본 카메라 사용: ' + e.message);
+          await room.localParticipant.setCameraEnabled(true, { resolution: LK.VideoPresets.h1080.resolution });
+        }
         const pub = room.localParticipant.getTrackPublication(LK.Track.Source.Camera);
         if (pub?.videoTrack) pub.videoTrack.attach($('preview'));
 

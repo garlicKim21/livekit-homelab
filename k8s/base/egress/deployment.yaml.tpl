@@ -14,6 +14,9 @@ spec:
       labels: { app: egress }
     spec:
       enableServiceLinks: false
+      # egress 는 uid 1001 로 실행 → PVC(/out, 기본 root:root)에 쓰도록 fsGroup 부여
+      securityContext:
+        fsGroup: 1001
       # 진행 중인 녹화를 flush 할 시간 확보
       terminationGracePeriodSeconds: 3600
       containers:
