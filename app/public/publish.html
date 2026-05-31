@@ -43,7 +43,7 @@
     const log = logTo($('status'));
     let room, LK;
     let facing = 'environment'; // 기본 후면 카메라 ('user' = 전면)
-    const captureOpts = () => ({ facingMode: facing, resolution: LK.VideoPresets.h720.resolution });
+    const captureOpts = () => ({ facingMode: facing, resolution: LK.VideoPresets.h1080.resolution });
 
     (async () => {
       const cfg = await loadConfig();
