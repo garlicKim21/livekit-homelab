@@ -7,6 +7,9 @@ metadata:
   labels: { app: egress }
 spec:
   replicas: 1
+  # RWO PVC(recordings) — 새 파드가 뜨기 전에 기존 파드를 내려 Multi-Attach 회피
+  strategy:
+    type: Recreate
   selector:
     matchLabels: { app: egress }
   template:
