@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: ${K8S_NAMESPACE}
+  labels: { app: redis }
+spec:
+  type: ClusterIP
+  selector: { app: redis }
+  ports:
+    - { name: redis, port: 6379, targetPort: 6379, protocol: TCP }

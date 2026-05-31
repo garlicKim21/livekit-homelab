@@ -1,0 +1,6 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${K8S_NAMESPACE}
+  labels:
+    app.kubernetes.io/part-of: livekit-homelab

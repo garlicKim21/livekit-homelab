@@ -1,0 +1,16 @@
+# secrets / env
+.env
+config/.env
+*.local.yaml
+
+# 렌더 산출물 (config/.env 로부터 생성, 시크릿 포함)
+rendered/
+
+# node
+node_modules/
+npm-debug.log*
+dist/
+
+# misc
+.DS_Store
+*.log

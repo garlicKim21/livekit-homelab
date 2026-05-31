@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>송출 · LiveKit 홈랩</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="card">
+    <a class="back" href="/">← 홈</a>
+    <h1>📱 카메라 송출 <span class="pill tcp">TCP</span></h1>
+    <p>아이폰 Safari 에서 카메라를 룸으로 송출합니다. (HTTPS 필수)</p>
+
+    <div class="grid">
+      <div>
+        <label>룸 이름</label>
+        <input id="room" />
+      </div>
+      <div>
+        <label>참가자 ID (identity)</label>
+        <input id="identity" value="phone-user" />
+      </div>
+    </div>
+    <div class="row">
+      <button id="connect" class="btn primary">송출 시작</button>
+      <button id="disconnect" class="btn danger" disabled>중지</button>
+    </div>
+
+    <video id="preview" autoplay playsinline muted></video>
+    <div id="status" class="status">준비됨</div>
+  </main>
+
+  <script type="module">
+    import { loadConfig, loadSdk, getToken, logTo } from '/common.js';
+
+    const $ = (id) => document.getElementById(id);
+    const log = logTo($('status'));
+    let room, LK;
+
+    (async () => {
+      const cfg = await loadConfig();
+      $('room').value = cfg.defaultRoom;
+      LK = await loadSdk(cfg.clientVersion);
+      log(`SDK 로드 완료. 송출 준비됨 (룸=${cfg.defaultRoom})`);
+    })().catch((e) => log('초기화 오류: ' + e.message));
+
+    $('connect').onclick = async () => {
+      try {
+        $('connect').disabled = true;
+        const { token, wsUrl } = await getToken({
+          room: $('room').value, identity: $('identity').value, role: 'publisher',
+        });
+        room = new LK.Room({ adaptiveStream: true, dynacast: true });
+        room.on(LK.RoomEvent.ConnectionStateChanged, (s) => log('연결상태: ' + s));
+        room.on(LK.RoomEvent.Disconnected, () => { $('connect').disabled = false; $('disconnect').disabled = true; });
+
+        await room.connect(wsUrl, token);
+        log('시그널링 연결됨: ' + wsUrl);
+
+        await room.localParticipant.enableCameraAndMicrophone();
+        const pub = room.localParticipant.getTrackPublication(LK.Track.Source.Camera);
+        if (pub?.videoTrack) pub.videoTrack.attach($('preview'));
+
+        $('disconnect').disabled = false;
+        log('카메라 송출 중. identity=' + room.localParticipant.identity);
+      } catch (e) {
+        log('오류: ' + e.message);
+        $('connect').disabled = false;
+      }
+    };
+
+    $('disconnect').onclick = async () => {
+      await room?.disconnect();
+      log('송출 중지됨');
+    };
+  </script>
+</body>
+</html>
