@@ -28,6 +28,7 @@
     </div>
     <div class="row">
       <button id="connect" class="btn primary">송출 시작</button>
+      <button id="flip" class="btn" disabled>🔄 전/후면 전환</button>
       <button id="disconnect" class="btn danger" disabled>중지</button>
     </div>
 
@@ -41,6 +42,8 @@
     const $ = (id) => document.getElementById(id);
     const log = logTo($('status'));
     let room, LK;
+    let facing = 'environment'; // 기본 후면 카메라 ('user' = 전면)
+    const captureOpts = () => ({ facingMode: facing, resolution: LK.VideoPresets.h720.resolution });
 
     (async () => {
       const cfg = await loadConfig();
@@ -65,20 +68,40 @@
         await room.connect(wsUrl, token);
         log('시그널링 연결됨: ' + wsUrl);
 
-        await room.localParticipant.enableCameraAndMicrophone();
+        await room.localParticipant.setMicrophoneEnabled(true);
+        await room.localParticipant.setCameraEnabled(true, captureOpts());
         const pub = room.localParticipant.getTrackPublication(LK.Track.Source.Camera);
         if (pub?.videoTrack) pub.videoTrack.attach($('preview'));
 
         $('disconnect').disabled = false;
-        log('카메라 송출 중. identity=' + room.localParticipant.identity);
+        $('flip').disabled = false;
+        log(`카메라 송출 중(${facing==='environment'?'후면':'전면'}). identity=` + room.localParticipant.identity);
       } catch (e) {
         log('오류: ' + e.message);
         $('connect').disabled = false;
       }
     };
 
+    $('flip').onclick = async () => {
+      try {
+        $('flip').disabled = true;
+        facing = facing === 'environment' ? 'user' : 'environment';
+        // 새 facingMode 로 카메라 트랙 재발행
+        await room.localParticipant.setCameraEnabled(false);
+        await room.localParticipant.setCameraEnabled(true, captureOpts());
+        const pub = room.localParticipant.getTrackPublication(LK.Track.Source.Camera);
+        if (pub?.videoTrack) pub.videoTrack.attach($('preview'));
+        log(`카메라 전환: ${facing === 'environment' ? '후면' : '전면'}`);
+      } catch (e) {
+        log('전환 오류: ' + e.message);
+      } finally {
+        $('flip').disabled = false;
+      }
+    };
+
     $('disconnect').onclick = async () => {
       await room?.disconnect();
+      $('flip').disabled = true;
       log('송출 중지됨');
     };
   </script>
