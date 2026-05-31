@@ -21,6 +21,10 @@
         <label>참가자 ID (identity)</label>
         <input id="identity" value="phone-user" />
       </div>
+      <div>
+        <label>접근 비밀번호</label>
+        <input id="password" type="password" placeholder="APP_PASSWORD" />
+      </div>
     </div>
     <div class="row">
       <button id="connect" class="btn primary">송출 시작</button>
@@ -32,7 +36,7 @@
   </main>
 
   <script type="module">
-    import { loadConfig, loadSdk, getToken, logTo } from '/common.js';
+    import { loadConfig, loadSdk, getToken, logTo, setPassword, getPassword } from '/common.js';
 
     const $ = (id) => document.getElementById(id);
     const log = logTo($('status'));
@@ -41,6 +45,8 @@
     (async () => {
       const cfg = await loadConfig();
       $('room').value = cfg.defaultRoom;
+      $('password').value = getPassword();
+      if (!cfg.passwordRequired) $('password').closest('div').style.display = 'none';
       LK = await loadSdk(cfg.clientVersion);
       log(`SDK 로드 완료. 송출 준비됨 (룸=${cfg.defaultRoom})`);
     })().catch((e) => log('초기화 오류: ' + e.message));
@@ -48,6 +54,7 @@
     $('connect').onclick = async () => {
       try {
         $('connect').disabled = true;
+        setPassword($('password').value);
         const { token, wsUrl } = await getToken({
           room: $('room').value, identity: $('identity').value, role: 'publisher',
         });

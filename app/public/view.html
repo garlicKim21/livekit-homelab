@@ -21,6 +21,10 @@
         <label>내 ID (viewer)</label>
         <input id="identity" value="pc-viewer" />
       </div>
+      <div>
+        <label>접근 비밀번호</label>
+        <input id="password" type="password" placeholder="APP_PASSWORD" />
+      </div>
     </div>
     <div class="row">
       <button id="connect" class="btn primary">시청 시작</button>
@@ -46,7 +50,7 @@
   </main>
 
   <script type="module">
-    import { loadConfig, loadSdk, getToken, logTo } from '/common.js';
+    import { loadConfig, loadSdk, getToken, logTo, setPassword, getPassword, authHeaders } from '/common.js';
 
     const $ = (id) => document.getElementById(id);
     const log = logTo($('status'));
@@ -55,6 +59,8 @@
     (async () => {
       const cfg = await loadConfig();
       $('room').value = cfg.defaultRoom;
+      $('password').value = getPassword();
+      if (!cfg.passwordRequired) $('password').closest('div').style.display = 'none';
       if (cfg.recordingEnabled) $('recordBox').hidden = false;
       LK = await loadSdk(cfg.clientVersion);
       log(`SDK 로드 완료. 시청 준비됨 (룸=${cfg.defaultRoom})`);
@@ -70,6 +76,7 @@
     $('connect').onclick = async () => {
       try {
         $('connect').disabled = true;
+        setPassword($('password').value);
         const { token, wsUrl } = await getToken({
           room: $('room').value, identity: $('identity').value, role: 'viewer',
         });
@@ -100,7 +107,7 @@
     $('recStart').onclick = async () => {
       try {
         const res = await fetch('/api/record/start', {
-          method: 'POST', headers: { 'content-type': 'application/json' },
+          method: 'POST', headers: authHeaders({ 'content-type': 'application/json' }),
           body: JSON.stringify({ room: $('room').value, identity: $('recIdentity').value }),
         });
         const data = await res.json();
@@ -113,7 +120,7 @@
     $('recStop').onclick = async () => {
       try {
         const res = await fetch('/api/record/stop', {
-          method: 'POST', headers: { 'content-type': 'application/json' },
+          method: 'POST', headers: authHeaders({ 'content-type': 'application/json' }),
           body: JSON.stringify({ egressId: currentEgressId }),
         });
         const data = await res.json();

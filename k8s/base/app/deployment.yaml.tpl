@@ -26,6 +26,8 @@ spec:
               valueFrom: { secretKeyRef: { name: lk-web-secret, key: LIVEKIT_API_KEY } }
             - name: LIVEKIT_API_SECRET
               valueFrom: { secretKeyRef: { name: lk-web-secret, key: LIVEKIT_API_SECRET } }
+            - name: APP_PASSWORD
+              valueFrom: { secretKeyRef: { name: lk-web-secret, key: APP_PASSWORD } }
           readinessProbe:
             httpGet: { path: /healthz, port: 8080 }
             initialDelaySeconds: 3

@@ -25,6 +25,8 @@ const {
   ENABLE_RECORDING = 'true',
   DEFAULT_ROOM = 'demo-room',
   PORT = '8080',
+  // 공유 비밀번호 (토큰/녹화 API 보호). 비우면 보호 비활성.
+  APP_PASSWORD = '',
 } = process.env;
 
 if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
@@ -40,19 +42,30 @@ const egress = recordingEnabled
 const app = express();
 app.use(express.json());
 
-// 프론트엔드 런타임 설정 노출 (도메인/버전 등을 빌드 없이 주입)
+// ── 비밀번호 게이트 ──
+// APP_PASSWORD 가 설정돼 있으면 보호된 API 는 X-App-Password 헤더를 요구한다.
+const passwordRequired = APP_PASSWORD.length > 0;
+function checkPassword(req, res, next) {
+  if (!passwordRequired) return next();
+  const provided = req.header('x-app-password') || '';
+  if (provided === APP_PASSWORD) return next();
+  return res.status(401).json({ error: 'invalid or missing password' });
+}
+
+// 프론트엔드 런타임 설정 노출 (비밀번호 불필요 — 보호 여부만 알려줌)
 app.get('/api/config', (_req, res) => {
   res.json({
     wsUrl: LIVEKIT_WS_URL,
     clientVersion: LIVEKIT_CLIENT_VERSION,
     defaultRoom: DEFAULT_ROOM,
     recordingEnabled,
+    passwordRequired,
   });
 });
 
 // 액세스 토큰 발급
 //   GET /api/token?room=demo-room&identity=phone-user&role=publisher|viewer
-app.get('/api/token', async (req, res) => {
+app.get('/api/token', checkPassword, async (req, res) => {
   try {
     const room = String(req.query.room || DEFAULT_ROOM);
     const identity = String(req.query.identity || `user-${Date.now()}`);
@@ -81,7 +94,7 @@ app.get('/api/token', async (req, res) => {
 
 // 녹화 시작 — 특정 참가자(identity)를 로컬 파일로 저장
 //   POST /api/record/start { room, identity }
-app.post('/api/record/start', async (req, res) => {
+app.post('/api/record/start', checkPassword, async (req, res) => {
   if (!egress) return res.status(400).json({ error: 'recording disabled' });
   try {
     const { room = DEFAULT_ROOM, identity } = req.body || {};
@@ -105,7 +118,7 @@ app.post('/api/record/start', async (req, res) => {
 
 // 녹화 중지
 //   POST /api/record/stop { egressId }
-app.post('/api/record/stop', async (req, res) => {
+app.post('/api/record/stop', checkPassword, async (req, res) => {
   if (!egress) return res.status(400).json({ error: 'recording disabled' });
   try {
     const { egressId } = req.body || {};
@@ -119,7 +132,7 @@ app.post('/api/record/stop', async (req, res) => {
 });
 
 // 진행 중 녹화 목록
-app.get('/api/record/list', async (_req, res) => {
+app.get('/api/record/list', checkPassword, async (_req, res) => {
   if (!egress) return res.json({ items: [] });
   try {
     const items = await egress.listEgress({ active: true });
@@ -135,5 +148,5 @@ app.get('/healthz', (_req, res) => res.send('ok'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(Number(PORT), () => {
-  console.log(`lk-web listening on :${PORT}  (recording=${recordingEnabled})`);
+  console.log(`lk-web listening on :${PORT}  (recording=${recordingEnabled}, password=${passwordRequired})`);
 });

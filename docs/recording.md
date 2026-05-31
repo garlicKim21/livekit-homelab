@@ -23,7 +23,7 @@
 ## 로컬 PVC 저장 — 주의사항
 
 - 파일은 **egress 파드의 PVC 내부**(`${RECORDING_PATH}`)에 저장됩니다. 녹화 진행 중 파드가 죽으면 해당 파일은 유실됩니다.
-- 기본 접근모드는 `ReadWriteOnce`(`RECORDING_PVC_ACCESS_MODE`). 여러 파드/외부에서 파일을 함께 보려면 `ReadWriteMany`(NFS/Longhorn 등)로 바꾸세요.
+- 기본 접근모드는 `ReadWriteOnce`(`RECORDING_PVC_ACCESS_MODE`). 이 클러스터 기본 StorageClass는 `vsphere-csi`(RWO, `WaitForFirstConsumer`)이므로 단일 egress 파드에 적합합니다. 여러 파드/외부에서 함께 보려면 `ReadWriteMany`(NFS 등) StorageClass로 바꾸세요.
 - 파일 꺼내기:
   ```bash
   # 녹화된 파일 목록

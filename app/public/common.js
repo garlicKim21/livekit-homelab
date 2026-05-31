@@ -17,9 +17,22 @@ export async function loadSdk(version) {
   return window.LivekitClient;
 }
 
+// ── 비밀번호 (세션 동안 sessionStorage 보관) ──
+export function setPassword(pw) {
+  if (pw) sessionStorage.setItem('lk-pw', pw);
+}
+export function getPassword() {
+  return sessionStorage.getItem('lk-pw') || '';
+}
+// 보호된 API 호출용 헤더
+export function authHeaders(extra = {}) {
+  return { 'X-App-Password': getPassword(), ...extra };
+}
+
 export async function getToken({ room, identity, role }) {
   const q = new URLSearchParams({ room, identity, role });
-  const res = await fetch(`/api/token?${q}`);
+  const res = await fetch(`/api/token?${q}`, { headers: authHeaders() });
+  if (res.status === 401) throw new Error('비밀번호가 틀렸습니다');
   if (!res.ok) throw new Error('토큰 발급 실패');
   return res.json(); // { token, wsUrl, room, identity }
 }

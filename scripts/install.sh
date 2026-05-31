@@ -25,6 +25,7 @@ echo "▶ Secret: lk-web-secret (API key/secret)"
 kubectl -n "$NS" create secret generic lk-web-secret \
   --from-literal=LIVEKIT_API_KEY="$LIVEKIT_API_KEY" \
   --from-literal=LIVEKIT_API_SECRET="$LIVEKIT_API_SECRET" \
+  --from-literal=APP_PASSWORD="${APP_PASSWORD:-}" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 if [ "${ENABLE_RECORDING:-false}" = "true" ]; then
