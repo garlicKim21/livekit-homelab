@@ -21,6 +21,13 @@ curl -sI https://${LIVEKIT_HOST}
 ```
 - nginx **WebSocket upgrade 헤더**(`Upgrade`/`Connection`) 확인 → [opnsense-nginx.md](opnsense-nginx.md).
 - HTTPRoute Host 매칭(`${LIVEKIT_HOST}`)과 nginx `Host` 보존 확인.
+- **`GET /`나 `/rtc/validate`가 404면 HTTPRoute가 Gateway에 attach 안 된 것** (livekit까지 도달하면 401). 확인:
+  ```bash
+  kubectl get httproute livekit-signaling -n ${K8S_NAMESPACE} -o jsonpath='{.status.parents[*].conditions[*].type}'  # 비어있으면 미reconcile
+  kubectl get gateway shared-gateway -n gateway-system -o jsonpath='{.status.listeners[*].attachedRoutes}'
+  ```
+  - parentRef에 **`sectionName`을 명시하면 Cilium이 attach 안 하는 사례** 있음 → 생략(단일 리스너면 불필요).
+  - status가 통째로 비어 있으면 **cilium-operator의 gateway-api 컨트롤러가 새 라우트를 reconcile 안 하는 상태**(operator 재시작 후 init 실패 시 발생). 해결: `kubectl -n kube-system rollout restart deployment cilium-operator` (컨트롤플레인만, 기존 트래픽 무영향).
 - `kubectl logs -n ${K8S_NAMESPACE} deploy/livekit-server`.
 
 ## 4. 연결은 되는데 영상이 안 보임 (미디어 ICE/TCP)
