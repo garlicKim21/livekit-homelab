@@ -38,6 +38,10 @@ sequenceDiagram
 - Room Composite로 바꾸려면 CPU를 6 이상으로 올리고 `/dev/shm`(EGRESS_SHM_SIZE) 메모리가 필요합니다. 인스턴스당 동시 1개 방만 녹화되므로, 여러 방을 동시에 녹화하려면 replica를 늘리거나 오토스케일링이 필요합니다.
 - egress 파드는 진행 중 녹화를 완료(flush)하기 위해 `terminationGracePeriodSeconds: 3600` 으로 설정되어 있습니다.
 
+> **실측 — Participant Egress는 매우 가볍습니다.** 1080p 단일 스트림 녹화 중에도 CPU는 0.x 코어 수준(유휴 ~7m, mem ~21Mi). 이유: **트랜스코딩이 아니라 리먹스(passthrough)** — 이미 인코딩된 트랙(VP8/opus)을 재인코딩 없이 컨테이너에 담고 타임스탬프만 정렬(로그의 `adjusting PTS offset`)합니다. 무거운 4~6 CPU는 **Room Composite**(Chrome 합성+재인코딩) 한정. → `EGRESS_CPU` request/limit를 낮추거나 동시 녹화 다수를 한 노드에서 돌릴 수 있습니다.
+>
+> **코덱/호환성**: 리먹스라 파일에 원본 코덱(VP8/opus)이 담깁니다. `.mp4` 확장자라도 VP8은 QuickTime 등 일부 플레이어가 못 엽니다(VLC/Chrome OK). `ffprobe <file>` 로 확인. 범용 H.264/AAC가 필요하면 ① 송출 코덱을 H.264로 지정(리먹스 유지, 가벼움) 또는 ② egress 트랜스코딩(CPU↑).
+
 ## 로컬 PVC 저장 — 주의사항
 
 - 파일은 **egress 파드의 PVC 내부**(`${RECORDING_PATH}`)에 저장됩니다. 녹화 진행 중 파드가 죽으면 해당 파일은 유실됩니다.
