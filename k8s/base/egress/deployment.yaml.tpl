@@ -13,6 +13,7 @@ spec:
     metadata:
       labels: { app: egress }
     spec:
+      enableServiceLinks: false
       # 진행 중인 녹화를 flush 할 시간 확보
       terminationGracePeriodSeconds: 3600
       containers:

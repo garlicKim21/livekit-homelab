@@ -29,7 +29,7 @@ curl -sI https://${LIVEKIT_HOST}
 kubectl get svc -n ${K8S_NAMESPACE} lk-media     # EXTERNAL-IP
 nc -vz ${PUBLIC_IP} 7881                          # 외부망에서
 ```
-- **ICE 후보 확인**: PC 크롬 `chrome://webrtc-internals` → 활성 candidate가 `tcp`이고 원격이 `${PUBLIC_IP}:7881`인지. UDP 후보가 보이면 `port_range_start/end: 0` 미적용.
+- **ICE 후보 확인**: PC 크롬 `chrome://webrtc-internals` → 활성 candidate가 `tcp`이고 원격이 `${PUBLIC_IP}:7881`인지. UDP(7882)는 외부 포트포워딩하지 않으므로 도달 불가 → TCP로 붙어야 정상.
 - **node_ip**: config의 `rtc.node_ip`가 공인 IP, `use_external_ip: false`인지.
   ```bash
   kubectl exec -n ${K8S_NAMESPACE} deploy/livekit-server -- cat /etc/livekit/config.yaml

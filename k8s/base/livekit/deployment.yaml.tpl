@@ -15,6 +15,9 @@ spec:
         # config 변경 시 롤아웃되도록 install.sh 가 해시를 패치할 수 있음
         checksum/config: "render-time"
     spec:
+      # Service 'livekit' 가 주입하는 LIVEKIT_* service-link 환경변수가
+      # livekit-server 의 LIVEKIT_PORT 설정과 충돌하므로 비활성화한다.
+      enableServiceLinks: false
       containers:
         - name: livekit-server
           image: ${LIVEKIT_SERVER_IMAGE}

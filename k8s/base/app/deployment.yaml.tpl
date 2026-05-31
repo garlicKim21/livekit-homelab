@@ -12,6 +12,7 @@ spec:
     metadata:
       labels: { app: lk-web }
     spec:
+      enableServiceLinks: false
       containers:
         - name: lk-web
           image: ${APP_IMAGE}

@@ -93,9 +93,11 @@ WebRTC 미디어는 **DTLS/SRTP 암호화된 비-HTTP 트래픽**이라 HTTP/TLS
 ## TCP-only 동작 원리
 
 LiveKit config(`k8s/base/livekit/config.yaml.tpl` → Secret):
-- `rtc.port_range_start: 0`, `rtc.port_range_end: 0` → **UDP 후보 비활성**
-- `rtc.tcp_port: 7881` → 모든 미디어가 이 단일 TCP 포트로 mux
+- `rtc.tcp_port: 7881` → 모든 TCP 미디어가 이 단일 포트로 mux (**외부 노출**)
+- `rtc.udp_port: 7882` → 단일 UDP mux. **외부 포트포워딩 안 함(내부 전용)**
 - `rtc.use_external_ip: false` + `rtc.node_ip: <공인IP>` → ICE 후보로 공인 IP 광고
+
+> ⚠️ LiveKit엔 UDP를 완전히 끄는 옵션이 없습니다. **TCP-only는 "TCP 포트만 외부 노출"로 강제**합니다. 외부 클라는 UDP 후보(`공인IP:7882`)에 도달 못 해 자동으로 TCP(`공인IP:7881`)를 사용합니다.
 
 ## 포트 요약
 
@@ -107,7 +109,7 @@ LiveKit config(`k8s/base/livekit/config.yaml.tpl` → Secret):
 | 7880 | TCP | ❌ | Gateway→svc | LiveKit 시그널링 백엔드 |
 | 8080 | TCP | ❌ | Gateway→svc | 웹앱/토큰 |
 | 6379 | TCP | ❌ | 내부 | Redis (녹화 시) |
-| 50000-60000 | UDP | ❌ 비활성 | — | UDP 미디어 (TCP-only로 끔) |
+| 7882 | UDP | ❌ 미노출 | 내부 | UDP mux (외부 포트포워딩 안 함 → 외부는 TCP 사용) |
 
 ## 배포 토폴로지
 

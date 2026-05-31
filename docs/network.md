@@ -78,4 +78,4 @@ kubectl get svc -A | grep LoadBalancer
 | 80 | TCP | ✅ | OPNsense ACME | 인증서 갱신 |
 | **7881** | **TCP** | ✅ | **raw 포트포워딩** | WebRTC 미디어(ICE/TCP) |
 | 7880 | TCP | ❌ | Gateway→svc | 시그널링 백엔드 |
-| 50000-60000 | UDP | ❌ 비활성 | — | TCP-only로 끔 |
+| 7882 | UDP | ❌ 미노출 | 내부 | UDP mux (외부 포트포워딩 안 함) |
