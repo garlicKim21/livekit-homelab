@@ -8,6 +8,24 @@
 - **S3는 필수가 아닙니다.** 본 프로젝트는 **로컬 PVC**(`${RECORDING_PATH}`, 기본 `/out`)에 저장합니다. egress 설정에 스토리지 백엔드를 두지 않으면 파일 출력 경로(PVC)에 그대로 기록됩니다.
 - 단일 영상+오디오 스트림 녹화는 **Participant Egress** 를 사용합니다 → 헤드리스 Chrome 불필요, 가볍습니다.
 
+## 동작 원리 (파이프라인)
+
+```mermaid
+sequenceDiagram
+  participant E as egress
+  participant S as SFU(livekit)
+  participant D as PVC /out
+  E->>S: 숨은 구독자로 룸 입장(ws_url) → 대상 참가자 트랙 구독
+  S-->>E: RTP(영상 VP8 + 오디오 opus)
+  E->>D: GStreamer 파이프라인이 받는 즉시 MP4로 디스크에 증분 기록
+  Note over E,D: 메모리엔 작은 큐 버퍼만 — 통째로 쌓지 않음
+  E->>D: stop/EOS → 컨테이너 최종화(moov 기록) → 완전한 재생 파일
+```
+
+- **메모리에 통째로 담지 않습니다.** 받는 즉시 PVC 디스크의 `.mp4`로 증분 기록하고, RAM에는 작은 큐 버퍼만 둡니다. (장시간 녹화도 메모리 안전)
+- **MP4 최종화는 종료(stop) 시점**에 일어납니다. 미디어는 녹화 중 계속 디스크에 쓰이지만 컨테이너 인덱스(moov)는 stop 때 기록되므로, **중간 파일은 온전히 재생되지 않을 수 있고 stop 후 완성**됩니다.
+- 그래서 egress 파드는 `terminationGracePeriodSeconds: 3600` 으로 종료 시 진행 중 녹화를 flush·최종화합니다. **녹화 중 파드가 강제 종료되면 그 파일은 손상**될 수 있습니다.
+
 ## 컴퓨팅 사양 (공식 가이드 기반)
 
 | 방식 | Chrome | CPU/메모리(인스턴스당) | 동시 처리 |
@@ -24,13 +42,18 @@
 
 - 파일은 **egress 파드의 PVC 내부**(`${RECORDING_PATH}`)에 저장됩니다. 녹화 진행 중 파드가 죽으면 해당 파일은 유실됩니다.
 - 기본 접근모드는 `ReadWriteOnce`(`RECORDING_PVC_ACCESS_MODE`). 이 클러스터 기본 StorageClass는 `vsphere-csi`(RWO, `WaitForFirstConsumer`)이므로 단일 egress 파드에 적합합니다. 여러 파드/외부에서 함께 보려면 `ReadWriteMany`(NFS 등) StorageClass로 바꾸세요.
-- 파일 꺼내기:
+- 파일 꺼내기 (파드 이름 자동 조회):
   ```bash
-  # 녹화된 파일 목록
-  kubectl exec -n ${K8S_NAMESPACE} deploy/egress -- ls -lh ${RECORDING_PATH}
-  # 로컬로 복사
-  kubectl cp ${K8S_NAMESPACE}/<egress-pod>:${RECORDING_PATH}/<file>.mp4 ./<file>.mp4
+  NS=${K8S_NAMESPACE:-livekit}
+  # 1) 녹화된 파일 목록 (stop 된 파일이 완성본)
+  kubectl exec -n "$NS" deploy/egress -- ls -lh ${RECORDING_PATH:-/out}
+
+  # 2) 로컬로 복사
+  POD=$(kubectl get pod -n "$NS" -l app=egress -o jsonpath='{.items[0].metadata.name}')
+  kubectl cp "$NS/$POD:${RECORDING_PATH:-/out}/<파일>.mp4" ~/Downloads/<파일>.mp4
   ```
+  > `<파일>`은 위 1) 목록의 `demo-room-<identity>-<시각>.mp4`. 같은 이름의 `.json`은 egress 메타데이터. 녹화가 **stop 된 후** 복사해야 완전한 파일입니다.
+  > `scripts/record.sh start <identity>` / `stop <egressId>` / `list` 로 CLI 제어도 가능합니다.
 - 향후 S3/MinIO로 전환하려면 egress 설정(`k8s/base/egress/secret.yaml.tpl`)에 `s3:` 블록을 추가하고 녹화 요청의 출력 대상을 S3로 바꾸면 됩니다(코드에 주석으로 표시).
 
 ## 녹화 시작/중지
