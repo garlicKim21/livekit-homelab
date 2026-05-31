@@ -34,8 +34,9 @@ spec:
             - { name: recordings,  mountPath: ${RECORDING_PATH} }
             - { name: dshm,        mountPath: /dev/shm }
           resources:
-            requests: { cpu: "${EGRESS_CPU}", memory: ${EGRESS_MEMORY} }
-            limits:   { cpu: "${EGRESS_CPU}", memory: ${EGRESS_MEMORY} }
+            # request 는 스케줄 기준(노드 allocatable 내에 맞춰야 함), limit 은 버스트 상한
+            requests: { cpu: "${EGRESS_CPU_REQUEST}", memory: ${EGRESS_MEM_REQUEST} }
+            limits:   { cpu: "${EGRESS_CPU}",         memory: ${EGRESS_MEMORY} }
       volumes:
         - name: config
           secret: { secretName: egress-config }
