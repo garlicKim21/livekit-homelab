@@ -41,6 +41,9 @@ kubectl get svc -n livekit lk-media   # EXTERNAL-IP 확인
 ```
 고정하려면 `config/.env` 의 `MEDIA_LB_IP` 를 172.16.200.0/24 범위로 지정(첫/마지막 IP 제외).
 
+> ⚠️ **필터 규칙 함정 (실배포에서 겪음)**: pf(OPNsense)는 **NAT 변환 후 방화벽 필터를 평가**합니다. 따라서 포트포워드에 딸린 방화벽 규칙의 **Destination은 WAN address가 아니라 redirect 대상(미디어 LB IP `172.16.200.x`)** 이어야 매칭됩니다. WAN address로 두면 "Default deny / state violation"으로 차단됩니다.
+> → **권장**: 포트포워드의 `Filter rule association` 을 **`Pass`** 로 설정(규칙 자동 생성·매칭). 별도 수동 규칙을 쓸 거면 목적지를 LB IP로 지정.
+
 ---
 
 ## 3. Cilium BGP ⇄ OPNsense

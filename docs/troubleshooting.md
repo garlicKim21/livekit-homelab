@@ -35,7 +35,8 @@ nc -vz ${PUBLIC_IP} 7881                          # 외부망에서
   kubectl exec -n ${K8S_NAMESPACE} deploy/livekit-server -- cat /etc/livekit/config.yaml
   ```
 - **포트포워딩**: OPNsense `공인IP:7881 → 미디어 LB IP:7881`(TCP)과 방화벽 허용.
-- **클라이언트 소스 IP**: `lk-media`에 `externalTrafficPolicy: Local` 있어야 함.
+- **externalTrafficPolicy**: `lk-media`는 `Cluster` 사용(작동하는 gateway와 동일). `Local`은 BGP nexthop이 파드 노드로 고정되며 OPNsense에서 비대칭 라우팅("state violation") 차단을 유발할 수 있어 피한다. ICE/TCP는 ufrag로 세션 구분하므로 소스 IP 미보존이어도 무방.
+- **OPNsense 포트포워드 필터**: 7881이 외부에서 안 열리면, NAT 변환 후 필터가 평가되므로 **방화벽 규칙 목적지가 redirect 대상(미디어 LB IP)** 인지 확인. WAN address로 두면 "Default deny"로 막힌다. → 포트포워드의 `Filter rule association = Pass` 권장. [network.md](network.md) §2.
 
 ## 5. BGP / LoadBalancer IP 미할당
 

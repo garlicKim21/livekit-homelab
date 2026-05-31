@@ -11,8 +11,12 @@ metadata:
     ${MEDIA_LB_ANNOTATION}
 spec:
   type: LoadBalancer
-  # 클라이언트 소스 IP 보존 — WebRTC ICE 에 필요
-  externalTrafficPolicy: Local
+  # externalTrafficPolicy:
+  #  - Local  : 클라 소스 IP 보존하나, OPNsense BGP(nexthop=파드노드)와 결합 시
+  #             응답 경로 비대칭으로 OPNsense에서 "state violation"으로 차단되는 사례 발생.
+  #  - Cluster: 노드 내부 SNAT로 응답이 대칭 → OPNsense 통과. ICE/TCP는 연결별 ufrag로
+  #             세션을 구분하므로 소스 IP 미보존이어도 기능 문제 없음. (작동하는 gateway와 동일)
+  externalTrafficPolicy: Cluster
   selector: { app: livekit-server }
   ports:
     - { name: rtc-tcp, port: ${MEDIA_TCP_PORT}, targetPort: ${MEDIA_TCP_PORT}, protocol: TCP }

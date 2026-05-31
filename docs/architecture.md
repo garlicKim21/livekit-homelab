@@ -117,7 +117,7 @@ LiveKit config(`k8s/base/livekit/config.yaml.tpl` → Secret):
 namespace: ${K8S_NAMESPACE} (기본 livekit)
 ├── Deployment livekit-server (replicas:1) ─ Secret(config.yaml) 마운트
 │     ├── Service livekit    ClusterIP    7880        (시그널링, Gateway 백엔드)
-│     └── Service lk-media   LoadBalancer 7881/TCP    (lb-pool 자동 IP, externalTrafficPolicy:Local)
+│     └── Service lk-media   LoadBalancer 7881/TCP    (lb-pool 자동 IP, externalTrafficPolicy:Cluster)
 ├── Deployment lk-web        ─ Secret(lk-web-secret: API키 + APP_PASSWORD)
 ├── Deployment redis         (녹화 시) ─ Service redis 6379
 ├── Deployment egress        (녹화 시) ─ Secret(egress.yaml) + PVC(/out)
