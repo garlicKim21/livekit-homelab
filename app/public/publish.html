@@ -28,7 +28,6 @@
     </div>
     <div class="row">
       <button id="connect" class="btn primary">송출 시작</button>
-      <button id="flip" class="btn" disabled>🔄 전/후면 전환</button>
       <button id="disconnect" class="btn danger" disabled>중지</button>
     </div>
 
@@ -42,8 +41,8 @@
     const $ = (id) => document.getElementById(id);
     const log = logTo($('status'));
     let room, LK;
-    let facing = 'environment'; // 기본 후면 카메라 ('user' = 전면)
-    const captureOpts = () => ({ facingMode: facing, resolution: LK.VideoPresets.h1080.resolution });
+    // 후면 카메라 고정 (iOS Safari 는 facingMode 런타임 전환이 불안정 → 후면 고정)
+    const captureOpts = () => ({ facingMode: 'environment', resolution: LK.VideoPresets.h1080.resolution });
 
     (async () => {
       const cfg = await loadConfig();
@@ -74,34 +73,15 @@
         if (pub?.videoTrack) pub.videoTrack.attach($('preview'));
 
         $('disconnect').disabled = false;
-        $('flip').disabled = false;
-        log(`카메라 송출 중(${facing==='environment'?'후면':'전면'}). identity=` + room.localParticipant.identity);
+        log('카메라 송출 중(후면). identity=' + room.localParticipant.identity);
       } catch (e) {
         log('오류: ' + e.message);
         $('connect').disabled = false;
       }
     };
 
-    $('flip').onclick = async () => {
-      try {
-        $('flip').disabled = true;
-        facing = facing === 'environment' ? 'user' : 'environment';
-        // 새 facingMode 로 카메라 트랙 재발행
-        await room.localParticipant.setCameraEnabled(false);
-        await room.localParticipant.setCameraEnabled(true, captureOpts());
-        const pub = room.localParticipant.getTrackPublication(LK.Track.Source.Camera);
-        if (pub?.videoTrack) pub.videoTrack.attach($('preview'));
-        log(`카메라 전환: ${facing === 'environment' ? '후면' : '전면'}`);
-      } catch (e) {
-        log('전환 오류: ' + e.message);
-      } finally {
-        $('flip').disabled = false;
-      }
-    };
-
     $('disconnect').onclick = async () => {
       await room?.disconnect();
-      $('flip').disabled = true;
       log('송출 중지됨');
     };
   </script>
